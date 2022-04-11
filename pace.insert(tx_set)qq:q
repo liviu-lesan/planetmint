@@ -1,0 +1,71 @@
+[1mdiff --git a/planetmint/backend/tarantool/query.py b/planetmint/backend/tarantool/query.py[m
+[1mindex 36c5309..32dfad8 100644[m
+[1m--- a/planetmint/backend/tarantool/query.py[m
+[1m+++ b/planetmint/backend/tarantool/query.py[m
+[36m@@ -64,20 +64,27 @@[m [mdef store_transactions(connection, signed_transactions: list):[m
+     for transaction in signed_transactions:[m
+         txprepare = TransactionDecompose(transaction)[m
+         txtuples = txprepare.convert_to_tuple()[m
+[32m+[m[32m        tx_set = txtuples["transactions"][m
+[32m+[m[41m        [m
+ [m
+[31m-        txspace.insert(txtuples["transactions"])[m
+[32m+[m[32m        print(f"tx_set S : {tx_set}")[m
+[32m+[m[32m        print(f"transaction S : {txtuples}")[m
+ [m
+[32m+[m[32m        txspace.insert(tx_set)[m
+         for _in in txtuples["inputs"]:[m
+[32m+[m[32m            print( f"inputs : {_in}")[m
+             inxspace.insert(_in)[m
+ [m
+         for _out in txtuples["outputs"]:[m
+[32m+[m[32m            print( f"outputs : {_out}")[m
+             outxspace.insert(_out)[m
+ [m
+         for _key in txtuples["keys"]:[m
+             keysxspace.insert(_key)[m
+ [m
+         if txtuples["metadata"] is not None:[m
+[31m-            metadatasxspace.insert(txtuples["metadata"])[m
+[32m+[m[32m            print( f"metadata : {txtuples['id']}  + {txtuples['metadata']}")[m
+[32m+[m[32m            metadatasxspace.insert((txtuples["id"] , txtuples["metadata"]))[m
+ [m
+         if txtuples["asset"] is not None:[m
+             assetsxspace.insert(txtuples["asset"])[m
+[36m@@ -97,9 +104,11 @@[m [mdef get_transactions(connection, transactions_ids: list):[m
+ [m
+ @register_query(TarantoolDB)[m
+ def store_metadatas(connection, metadata: list):[m
+[32m+[m[32m    print(f"store metadata: {metadata}")[m
+     space = connection.space("meta_data")[m
+     for meta in metadata:[m
+[31m-        space.insert((meta["id"], meta["data"] if not "metadata" in meta else meta["metadata"]))[m
+[32m+[m[32m        print(f" meta : {meta}")[m
+[32m+[m[32m        #space.insert((meta["id"], meta["data"] if not "metadata" in meta else meta["metadata"]))[m
+ [m
+ [m
+ @register_query(TarantoolDB)[m
+[36m@@ -127,11 +136,11 @@[m [mdef store_asset(connection, asset: dict, tx_id=None):[m
+ [m
+ [m
+ @register_query(TarantoolDB)[m
+[31m-def store_assets(connection, assets: list):[m
+[32m+[m[32mdef store_assets( connection, assets: list, assets_tx_ids: list):[m
+     space = connection.space("assets")[m
+[31m-    for asset in assets:[m
+[32m+[m[32m    for i in range(len(assets)):[m
+         try:[m
+[31m-            space.insert((asset, asset["id"]))[m
+[32m+[m[32m            space.insert((assets[i], assets[i]["id"],assets_tx_ids[i]))[m
+         except:  # TODO Raise ERROR for Duplicate[m
+             pass[m
+ [m
+[36m@@ -372,6 +381,8 @@[m [mdef store_pre_commit_state(connection, state: dict):[m
+ @register_query(TarantoolDB)[m
+ def get_pre_commit_state(connection) -> dict:[m
+     space = connection.space("pre_commits")[m
+[32m+[m[32m    if not space:[m
+[32m+[m[32m        return {}[m
+     _commit = space.select([], index="id_search", limit=1).data[m
+     if len(_commit) == 0:[m
+         return {}[m

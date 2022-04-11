@@ -27,7 +27,8 @@ def test_make_sure_we_dont_remove_any_command():
 
     parser = create_parser()
 
-    assert parser.parse_args(['configure', 'localmongodb']).command
+    #assert parser.parse_args(['configure', 'localmongodb']).command
+    assert parser.parse_args(['configure', 'tarantool_db']).command
     assert parser.parse_args(['show-config']).command
     assert parser.parse_args(['init']).command
     assert parser.parse_args(['drop']).command
@@ -73,6 +74,8 @@ def test_bigchain_show_config(capsys):
     _, _ = capsys.readouterr()
     run_show_config(args)
     output_config = json.loads(capsys.readouterr()[0])
+    sorted_output_config = json.dumps(output_config, indent=4, sort_keys=True)
+    print( f"config : {sorted_output_config}")
     # Note: This test passed previously because we were always
     # using the default configuration parameters, but since we
     # are running with docker-compose now and expose parameters like
@@ -82,13 +85,15 @@ def test_bigchain_show_config(capsys):
     # and run_show_config updates the planetmint.config
     from planetmint.config import Config
     _config = Config().get()
-    del _config['CONFIGURED']
-    assert output_config == _config
+    sorted_config = json.dumps(_config, indent=4, sort_keys=True)
+    print( f"_config : {sorted_config}")
+    #del sorted_config['CONFIGURED']
+    assert sorted_output_config == sorted_config
 
 
 def test__run_init(mocker):
     from planetmint.commands.planetmint import _run_init
-    bigchain_mock = mocker.patch(
+    planetmint_mock = mocker.patch(
         'planetmint.commands.planetmint.planetmint.Planetmint')
     init_db_mock = mocker.patch(
         'planetmint.commands.planetmint.schema.init_database',
@@ -96,9 +101,9 @@ def test__run_init(mocker):
         spec_set=True,
     )
     _run_init()
-    bigchain_mock.assert_called_once_with()
+    planetmint_mock.assert_called_once_with()
     init_db_mock.assert_called_once_with(
-        connection=bigchain_mock.return_value.connection)
+        connection=planetmint_mock.return_value.connection)
 
 
 @patch('planetmint.backend.schema.drop_database')
@@ -131,6 +136,7 @@ def test_drop_db_when_db_does_not_exist(mock_db_drop, capsys):
 
     run_drop(args)
     output_message = capsys.readouterr()[1]
+    print(f"output : {output_message}")
     assert output_message == "Cannot drop '{name}'. The database does not exist.\n".format(
         name=Config().get()['database']['name'])
 

@@ -79,11 +79,11 @@ def test_get_assets(db_conn):
         {'id': "2", 'data': '2'},
         {'id': "3", 'data': '3'},
     ]
-
-    query.store_assets(assets=assets, connection=conn)
+    tx_ids = [ '1', '2', '3']
+    query.store_assets(connection=conn, assets=assets, assets_tx_ids= tx_ids )
 
     for asset in assets:
-        assert query.get_asset(asset_id=asset['id'], connection=conn)
+        assert query.get_asset( connection=conn, asset_id=asset['id'])
 
 
 @pytest.mark.parametrize('table', ['assets', 'metadata'])
@@ -176,9 +176,9 @@ def test_write_metadata(db_conn):
     # conn = Connection().get_connection()
     conn = db_conn.get_connection()
     metadata = [
-        {'id': "1", 'data': '1'},
-        {'id': "2", 'data': '2'},
-        {'id': "3", 'data': '3'}
+        {'id': "1", 'metadata': '1'},
+        {'id': "2", 'metadata': '2'},
+        {'id': "3", 'metadata': '3'}
     ]
     # write the assets
     query.store_metadatas(connection=conn, metadata=metadata)
@@ -187,9 +187,11 @@ def test_write_metadata(db_conn):
     space = conn.space("meta_data")
     metadatas = []
     for meta in metadata:
+        print(f"data: {meta}")
         _data = space.select(meta["id"])
-        _data = _data.data[0]
-        metadatas.append({"id": _data[0], "data": _data[1]})
+        print(f"data: {_data}")
+
+        metadatas.append({"id": _data[0], "metadata": _data[1]})
 
     metadatas = sorted(metadatas, key=lambda k: k["id"])
 

@@ -29,6 +29,7 @@ elections:create_index('update_search', {type='tree', unique=false, parts={'elec
 meta_datas = box.schema.space.create('meta_data',{engine = 'memtx' , is_sync = false})
 meta_datas:format({{name='transaction_id' , type='string'}, {name='meta_data' , type='any'}})
 meta_datas:create_index('id_search', { type='hash' , parts={'transaction_id'}})
+meta_datas:create_index('meta_search', { type='hash', unique=false , parts={'meta_data'}})
 
 pre_commits = box.schema.space.create('pre_commits' , {engine='memtx' , is_sync=false})
 pre_commits:format({{name='commit_id', type='string'}, {name='height',type='integer'}, {name='transactions',type=any}})

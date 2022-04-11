@@ -32,7 +32,8 @@ class TransactionDecompose:
             "outputs": [],
             "keys": [],
             "metadata": None,
-            "asset": None
+            "asset": None,
+            "id": None
         }
         print(f"Transaction ::::: {self._transaction}")
 
@@ -115,6 +116,7 @@ class TransactionDecompose:
     def convert_to_tuple(self):
         self._metadata_check()
         self.__asset_check()
+        self._tuple_transaction["id"] = self._transaction["id"]
         self._tuple_transaction["transactions"] = self.__prepare_transaction()
         self._tuple_transaction["inputs"] = self.__prepare_inputs()
         keys, outputs = self.__prepare_outputs()

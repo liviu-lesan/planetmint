@@ -64,21 +64,27 @@ def store_transactions(connection, signed_transactions: list):
     for transaction in signed_transactions:
         txprepare = TransactionDecompose(transaction)
         txtuples = txprepare.convert_to_tuple()
+        tx_set = txtuples["transactions"]
 
-        txspace.insert(txtuples["transactions"])
-
+        print(f"tx_set S : {tx_set}")
+        txspace.insert( ( tx_set[0], tx_set[1], tx_set[2], tx_set[3] ) )
+        
         for _in in txtuples["inputs"]:
+            print( f"inputs : {_in}")
             inxspace.insert(_in)
 
         for _out in txtuples["outputs"]:
+            print( f"outputs : {_out}")
             outxspace.insert(_out)
 
         for _key in txtuples["keys"]:
             keysxspace.insert(_key)
 
         if txtuples["metadata"] is not None:
-            metadatasxspace.insert(txtuples["metadata"])
+            print( f"metadata : {txtuples['id']}  + {txtuples['metadata']}")
+            metadatasxspace.insert((txtuples["id"] , txtuples["metadata"]))
 
+        print( f"asset: {txtuples['asset']}")
         if txtuples["asset"] is not None:
             assetsxspace.insert(txtuples["asset"])
 
@@ -97,9 +103,15 @@ def get_transactions(connection, transactions_ids: list):
 
 @register_query(TarantoolDB)
 def store_metadatas(connection, metadata: list):
+    print(f"store metadata: {metadata}")
     space = connection.space("meta_data")
     for meta in metadata:
-        space.insert((meta["id"], meta["data"] if not "metadata" in meta else meta["metadata"]))
+        print(f" meta : {meta}")
+        #space.insert( (meta["id"], meta["metadata"] if not "metadata" in meta else meta["metadata"]))
+        data = meta["metadata"]
+        if not data:
+            data = ""
+        space.insert( (meta["id"], data ))
 
 
 @register_query(TarantoolDB)
@@ -108,6 +120,7 @@ def get_metadata(connection, transaction_ids: list):
     space = connection.space("meta_data")
     for _id in transaction_ids:
         metadata = space.select(_id, index="id_search")
+        print(f"meatadata : {metadata}")
         _returned_data.append({"id": metadata.data[0][0], "metadata": metadata.data[0][1]})
     return _returned_data
 
@@ -127,11 +140,11 @@ def store_asset(connection, asset: dict, tx_id=None):
 
 
 @register_query(TarantoolDB)
-def store_assets(connection, assets: list):
+def store_assets( connection, assets: list, assets_tx_ids: list):
     space = connection.space("assets")
-    for asset in assets:
+    for i in range(len(assets)):
         try:
-            space.insert((asset, asset["id"]))
+            space.insert((assets[i], assets[i]["id"],assets_tx_ids[i]))
         except:  # TODO Raise ERROR for Duplicate
             pass
 
@@ -372,6 +385,8 @@ def store_pre_commit_state(connection, state: dict):
 @register_query(TarantoolDB)
 def get_pre_commit_state(connection) -> dict:
     space = connection.space("pre_commits")
+    if not space:
+        return {}
     _commit = space.select([], index="id_search", limit=1).data
     if len(_commit) == 0:
         return {}
@@ -453,7 +468,7 @@ def get_election(connection, election_id: str):
 def get_asset_tokens_for_public_key(connection, asset_id: str, public_key: str):
     space = connection.space("keys")
     _keys = space.select([public_key], index="keys_search")
-    space = connection.space("transactions")
+    space = connection.space("assets")
     _transactions = space.select([asset_id], index="only_asset_search")
     _transactions = _transactions.data
     _keys = _keys.data

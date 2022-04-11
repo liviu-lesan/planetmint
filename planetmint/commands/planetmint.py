@@ -245,9 +245,6 @@ def run_election_show(args, planet):
 
 
 def _run_init():
-    # bdb = planetmint.Planetmint()
-
-    # schema.init_database(connection=bdb.connection)
     from planetmint.backend.connection import Connection
     conn = Connection()
     conn.init_database()

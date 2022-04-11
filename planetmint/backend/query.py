@@ -26,7 +26,7 @@ def store_asset(asset: dict, connection):
 
 
 @singledispatch
-def store_assets(assets: list, connection):
+def store_assets( connection, assets: list, assets_tx_ids: list):
     """Write a list of assets to the assets table.
 backend
     Args:

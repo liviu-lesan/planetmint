@@ -1,6 +1,6 @@
 ARG python_version=3.9
 FROM python:${python_version}
-LABEL maintainer "contact@ipdb.global"
+LABEL maintainer "contact@ipdb.io"
 
 RUN apt-get update \
     && apt-get install -y git zsh\

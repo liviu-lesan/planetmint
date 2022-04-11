@@ -131,23 +131,23 @@ class Planetmint(object):
     def store_bulk_transactions(self, transactions):
         txns = []
         assets = []
+        assets_tx_ids = []
         txn_metadatas = []
         for t in transactions:
             transaction = t.tx_dict if t.tx_dict else rapidjson.loads(rapidjson.dumps(t.to_dict()))
-            if transaction['operation'] == t.CREATE:
-                asset = transaction.pop('asset')
-                asset['id'] = transaction['id']
-                assets.append(asset)
-
-            metadata = transaction.pop('metadata')
-            txn_metadatas.append({'id': transaction['id'],
-                                  'metadata': metadata})
-            txns.append(transaction)
-
-        backend.query.store_metadatas(self.connection, txn_metadatas)
-        if assets:
-            backend.query.store_assets(self.connection, assets)
-        return backend.query.store_transactions(self.connection, txns)
+            backend.query.store_transactions(self.connection, [transaction])
+            #asset = transaction.pop('asset')
+            #assets.append(asset)
+            #assets_tx_ids.append( transaction['id'])
+#
+            #metadata = transaction.pop('metadata')
+            #txn_metadatas.append({'id': transaction['id'],
+            #                      'metadata': metadata})
+            #
+            #txns.append(transaction)
+        #backend.query.store_metadatas(self.connection, txn_metadatas)
+        #backend.query.store_assets(self.connection, assets, assets_tx_ids)
+        #return backend.query.store_transactions(self.connection, txns)
 
     def delete_transactions(self, txs):
         return backend.query.delete_transactions(self.connection, txs)

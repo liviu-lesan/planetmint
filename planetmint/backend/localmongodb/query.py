@@ -67,7 +67,7 @@ def store_asset(conn, asset):
 
 
 @register_query(LocalMongoDBConnection)
-def store_assets(conn, assets):
+def store_assets(conn, assets, assets_tx_ids=None):
     return conn.run(
         conn.collection('assets')
         .insert_many(assets, ordered=False))
