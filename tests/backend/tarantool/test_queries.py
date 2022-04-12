@@ -187,9 +187,8 @@ def test_write_metadata(db_conn):
     space = conn.space("meta_data")
     metadatas = []
     for meta in metadata:
-        print(f"data: {meta}")
         _data = space.select(meta["id"])
-        print(f"data: {_data}")
+        _data = _data.data[0]
 
         metadatas.append({"id": _data[0], "metadata": _data[1]})
 
