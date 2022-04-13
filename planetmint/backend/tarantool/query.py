@@ -8,6 +8,8 @@
 from secrets import token_hex
 from operator import itemgetter
 
+import tarantool
+
 from planetmint.backend import query
 from planetmint.backend.utils import module_dispatch_registrar
 from planetmint.backend.tarantool.connection import TarantoolDB
@@ -64,8 +66,11 @@ def store_transactions(connection, signed_transactions: list):
     for transaction in signed_transactions:
         txprepare = TransactionDecompose(transaction)
         txtuples = txprepare.convert_to_tuple()
-
-        txspace.insert(txtuples["transactions"])
+        try:
+            txspace.insert(txtuples["transactions"])
+        except tarantool.Error as duplicate_error:
+            print(duplicate_error)
+            continue
 
         for _in in txtuples["inputs"]:
             inxspace.insert(_in)
@@ -119,15 +124,15 @@ def get_metadata(connection, transaction_ids: list):
 @register_query(TarantoolDB)
 # asset: {"id": "asset_id"}
 # asset: {"data": any} -> insert (tx_id, asset["data"]).
-#def store_asset(connection, asset: dict, tx_id=None):
+# def store_asset(connection, asset: dict, tx_id=None):
 def store_asset(connection, asset: dict):
     space = connection.space("assets")
     # print(f"DATA  store asset: {asset}")
     try:
-        space.insert( asset )
-        #if tx_id is not None:
+        space.insert(asset)
+        # if tx_id is not None:
         #    space.insert((asset, tx_id, tx_id))
-        #else:
+        # else:
         #    space.insert((asset, str(asset["id"]), str(asset["id"])))  # TODO Review this function
     except:  # TODO Add Raise For Duplicate
         print("DUPLICATE ERROR")
@@ -139,9 +144,9 @@ def store_assets(connection, assets: list):
     for asset in assets:
         try:
             # print(f"DATA store assets: {asset}")
-            space.insert( asset )
-        except :  # TODO Raise ERROR for Duplicate
-            print( f"EXCEPTION : ")
+            space.insert(asset)
+        except:  # TODO Raise ERROR for Duplicate
+            print(f"EXCEPTION : ")
 
 
 @register_query(TarantoolDB)
