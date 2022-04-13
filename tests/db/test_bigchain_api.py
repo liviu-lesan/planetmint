@@ -11,7 +11,7 @@ from base58 import b58decode
 pytestmark = pytest.mark.bdb
 
 
-class TestBigchainApi(object):
+class TestBigApi(object):
 
     def test_get_spent_with_double_spend_detected(self, b, alice):
         from planetmint.models import Transaction

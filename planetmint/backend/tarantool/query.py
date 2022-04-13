@@ -184,7 +184,7 @@ def get_latest_block(connection):  # TODO Here is used DESCENDING OPERATOR
     space = connection.space("blocks_tx")
     _txids = space.select(_block[2], index="block_search")
     _txids = _txids.data
-    return {"app_hash": _block[1], "height": _block[1], "transactions": [tx[0] for tx in _txids]}
+    return {"app_hash": _block[0], "height": _block[1], "transactions": [tx[0] for tx in _txids]}
 
 
 @register_query(TarantoolDB)
@@ -490,8 +490,8 @@ def delete_abci_chain(connection, height: int):
 
 
 @register_query(TarantoolDB)
-def get_latest_abci_chain(connection):
-    space = connection.space("abci_chains")
+def get_latest_abci_chain(conn):
+    space = conn.space("abci_chains")
     _all_chains = space.select().data
     if len(_all_chains) == 0:
         return None
