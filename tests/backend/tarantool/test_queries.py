@@ -187,9 +187,8 @@ def test_write_metadata(db_conn):
     space = conn.space("meta_data")
     metadatas = []
     for meta in metadata:
-        _data = space.select(meta["id"])
-        _data = _data.data[0]
-        metadatas.append({"id": _data[0], "data": _data[1]})
+        _data = next(iter(space.select(meta["id"]).data))
+        metadatas.append(_data[1])
 
     metadatas = sorted(metadatas, key=lambda k: k["id"])
 

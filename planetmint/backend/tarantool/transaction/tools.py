@@ -2,12 +2,11 @@ from secrets import token_hex
 
 
 def _save_keys_order(dictionary):
-    filter_keys = ["asset", "metadata"]
     if type(dictionary) is dict:
         keys = list(dictionary.keys())
         _map = {}
         for key in keys:
-            _map[key] = _save_keys_order(dictionary=dictionary[key]) if key not in filter_keys else None
+            _map[key] = _save_keys_order(dictionary=dictionary[key])
 
         return _map
     elif type(dictionary) is list:
@@ -16,7 +15,7 @@ def _save_keys_order(dictionary):
             _map = {}
             keys = list(dictionary.keys())
             for key in keys:
-                _map[key] = _save_keys_order(dictionary=dictionary[key]) if key not in filter_keys else None
+                _map[key] = _save_keys_order(dictionary=dictionary[key])
 
             return _map
     else:
@@ -171,8 +170,8 @@ class TransactionCompose:
                 _out["condition"]["details"]["public_key"] = _output[4]
             else:
                 _out["condition"]["details"]["subconditions"] = _output[7]
-                _out["condition"]["type"] = _output[3]
-                _out["condition"]["treshold"] = _output[6]
+                _out["condition"]["details"]["type"] = _output[3]
+                _out["condition"]["details"]["threshold"] = _output[6]
             _outputs.append(_out)
         return _outputs
 

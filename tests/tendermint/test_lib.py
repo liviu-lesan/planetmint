@@ -54,6 +54,7 @@ def test_asset_is_separated_from_transaciton(b):
     tx_dict = copy.deepcopy(tx.to_dict())
 
     b.store_bulk_transactions([tx])
+    print(tx)
     assert 'asset' not in backend.query.get_transaction(b.connection, tx.id)
     assert backend.query.get_asset(b.connection, tx.id)['data'] == asset
     assert b.get_transaction(tx.id).to_dict() == tx_dict
