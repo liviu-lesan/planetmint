@@ -1,3 +1,4 @@
+import planetmint.backend.tarantool.tools as pltools
 from secrets import token_hex
 import copy
 from planetmint.common.memoize import HDict
@@ -55,15 +56,15 @@ class TransactionDecompose:
         metadata = self._transaction.get("metadata")
         if metadata is None:
             return
-
-        self._tuple_transaction["metadata"] = (self._transaction["id"], metadata)
+        
+        self._tuple_transaction["metadata"] = (self._transaction["id"], pltools.unwrap_to_string(metadata))
 
     def __asset_check(self):
         _asset = self._transaction.get("asset")
         if _asset is None:
             return
         asset_id = _asset["id"] if _asset.get("id") is not None else self._transaction["id"]
-        self._tuple_transaction["asset"] = (_asset, self._transaction["id"], asset_id)
+        self._tuple_transaction["asset"] = (pltools.unwrap_to_string(_asset), self._transaction["id"], asset_id)
 
     def __prepare_inputs(self):
         _inputs = []

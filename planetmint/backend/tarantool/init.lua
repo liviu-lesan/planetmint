@@ -4,7 +4,7 @@ abci_chains:create_index('id_search' ,{type='hash', parts={'chain_id'}})
 abci_chains:create_index('height_search' ,{type='tree',unique=false, parts={'height'}})
 
 assets = box.schema.space.create('assets' , {engine='memtx' , is_sync=false})
-assets:format({{name='data' , type='any'}, {name='tx_id', type='string'}, {name='asset_id', type='string'}})
+assets:format({{name='data' , type='string'}, {name='tx_id', type='string'}, {name='asset_id', type='string'}})
 assets:create_index('txid_search', {type='hash', parts={'tx_id'}})
 assets:create_index('assetid_search', {type='tree',unique=false, parts={'asset_id', 'tx_id'}})
 assets:create_index('only_asset_search', {type='tree', unique=false, parts={'asset_id'}})
@@ -27,7 +27,7 @@ elections:create_index('height_search' , {type='tree',unique=false, parts={'heig
 elections:create_index('update_search', {type='tree', unique=false, parts={'election_id', 'height'}})
 
 meta_datas = box.schema.space.create('meta_data',{engine = 'memtx' , is_sync = false})
-meta_datas:format({{name='transaction_id' , type='string'}, {name='meta_data' , type='any'}})
+meta_datas:format({{name='transaction_id' , type='string'}, {name='meta_data' , type='string'}})
 meta_datas:create_index('id_search', { type='hash' , parts={'transaction_id'}})
 
 pre_commits = box.schema.space.create('pre_commits' , {engine='memtx' , is_sync=false})

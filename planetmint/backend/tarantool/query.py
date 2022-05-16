@@ -4,11 +4,12 @@
 # Code is Apache-2.0 and docs are CC-BY-4.0
 
 """Query implementation for Tarantool"""
-
+import planetmint.backend.tarantool.tools
 from secrets import token_hex
 from operator import itemgetter
 
 from planetmint.backend import query
+from planetmint.backend.tarantool.tools import unwrap_to_string, wrap_list_to_json, wrap_to_json
 from planetmint.backend.utils import module_dispatch_registrar
 from planetmint.backend.tarantool.connection import TarantoolDB
 from planetmint.backend.tarantool.transaction.tools import TransactionCompose, TransactionDecompose
@@ -34,8 +35,8 @@ def _group_transaction_by_ids(connection, txids: list):
         _txinputs = inxspace.select(txid, index="id_search").data
         _txoutputs = outxspace.select(txid, index="id_search").data
         _txkeys = keysxspace.select(txid, index="txid_search").data
-        _txassets = assetsxspace.select(txid, index="txid_search").data
-        _txmeta = metaxspace.select(txid, index="id_search").data
+        _txassets = wrap_to_json(assetsxspace.select(txid, index="txid_search").data)
+        _txmeta = wrap_to_json(metaxspace.select(txid, index="id_search").data)
 
         _txinputs = sorted(_txinputs, key=itemgetter(6), reverse=False)
         _txoutputs = sorted(_txoutputs, key=itemgetter(8), reverse=False)
@@ -102,7 +103,7 @@ def get_transactions(connection, transactions_ids: list):
 def store_metadatas(connection, metadata: list):
     space = connection.space("meta_data")
     for meta in metadata:
-        space.insert((meta["id"], meta["data"] if not "metadata" in meta else meta["metadata"]))
+        space.insert(meta["id"], unwrap_to_string(meta["data"]) if not "metadata" in meta else unwrap_to_string(meta["metadata"]))
 
 
 @register_query(TarantoolDB)
@@ -112,14 +113,20 @@ def get_metadata(connection, transaction_ids: list):
     for _id in transaction_ids:
         metadata = space.select(_id, index="id_search").data
         if len(metadata) > 0:
-            _returned_data.append(metadata)
+            _returned_data.append(wrap_to_json(metadata))
     return _returned_data if len(_returned_data) > 0 else None
 
 
 @register_query(TarantoolDB)
 def store_asset(connection, asset):
     space = connection.space("assets")
-    convert = lambda obj: obj if isinstance(obj, tuple) else (obj, obj["id"], obj["id"])
+    #convert = lambda obj: obj if isinstance(obj, tuple) else (unwrap_to_string(obj), obj["id"], obj["id"])
+    def convert(obj):
+        if obj is isinstance(obj,tuple):
+            obj["data"] = unwrap_to_string(obj["data"])
+            return obj
+        else:
+            return unwrap_to_string(obj), obj["id"], obj["id"]
     try:
         space.insert(convert(asset))
     except:  # TODO Add Raise For Duplicate
@@ -129,8 +136,15 @@ def store_asset(connection, asset):
 @register_query(TarantoolDB)
 def store_assets(connection, assets: list):
     space = connection.space("assets")
-    convert = lambda obj: obj if isinstance(obj, tuple) else (obj, obj["id"], obj["id"])
+    #convert = lambda obj: obj if isinstance(obj, tuple) else (obj, obj["id"], obj["id"])
+    def convert(obj):
+        if obj is isinstance(obj,tuple):
+            obj["data"] = unwrap_to_string(obj["data"])
+            return obj
+        else:
+            return unwrap_to_string(obj), obj["id"], obj["id"]
     for asset in assets:
+        
         try:
             space.insert(convert(asset))
         except Exception as ex:  # TODO Raise ERROR for Duplicate
@@ -142,7 +156,10 @@ def get_asset(connection, asset_id: str):
     space = connection.space("assets")
     _data = space.select(asset_id, index="txid_search")
     _data = _data.data
-    return _data[0][0] if len(_data) > 0 else []
+    if len(_data) > 0:
+        return wrap_to_json(_data[0][0])
+    else:
+        return []
 
 
 @register_query(TarantoolDB)
@@ -230,26 +247,21 @@ def get_txids_filtered(connection, asset_id: str, operation: str = None,
     return tuple([elem[0] for elem in _transactions])
 
 
-# @register_query(TarantoolDB)
-# def text_search(conn, search, *, language='english', case_sensitive=False,
-#                 # TODO review text search in tarantool (maybe, remove)
-#                 diacritic_sensitive=False, text_score=False, limit=0, table='assets'):
-#     cursor = conn.run(
-#         conn.collection(table)
-#             .find({'$text': {
-#             '$search': search,
-#             '$language': language,
-#             '$caseSensitive': case_sensitive,
-#             '$diacriticSensitive': diacritic_sensitive}},
-#             {'score': {'$meta': 'textScore'}, '_id': False})
-#             .sort([('score', {'$meta': 'textScore'})])
-#             .limit(limit))
-#
-#     if text_score:
-#         return cursor
-#
-#     return (_remove_text_score(obj) for obj in cursor)
+@register_query(TarantoolDB)
+def text_search(connection, search, *, language='english', case_sensitive=False, diacritic_sensitive=False, text_score=False, limit=0, table='assets'):
+    import planetmint.backend.tarantool.tools
+    space = connection.space(table)
+    assets = space.select()
+    assets = assets.data
+    return_list= list()
 
+    if len(assets) > 0:
+        holder = wrap_list_to_json(assets)
+        for obj in holder:
+            if search in holder[obj].lower():
+                return_list.append(holder[obj])
+
+    return return_list
 
 def _remove_text_score(asset):
     asset.pop('score', None)
