@@ -248,20 +248,39 @@ def get_txids_filtered(connection, asset_id: str, operation: str = None,
 
 
 @register_query(TarantoolDB)
-def text_search(connection, search, *, language='english', case_sensitive=False, diacritic_sensitive=False, text_score=False, limit=0, table='assets'):
+def text_search(connection, search, *, language='english', case_sensitive=False, diacritic_sensitive=False, text_score=False, limit=0, table):
     import planetmint.backend.tarantool.tools
     space = connection.space(table)
     assets = space.select()
     assets = assets.data
     return_list= list()
-
     if len(assets) > 0:
         holder = wrap_list_to_json(assets)
         for obj in holder:
             if search in holder[obj].lower():
                 return_list.append(holder[obj])
+    
+    if case_sensitive is True:
+        holder = wrap_list_to_json(assets)
+        for obj in holder:
+            if search in holder[obj]:
+                return_list.append(holder[obj])
 
+    if limit >0:
+        holder = wrap_list_to_json(assets)
+        while return_list.count() == limit:
+            for obj in holder:
+                if search in holder[obj].lower():
+                    return_list.append(holder[obj])
+    if type(search) == list or tuple:
+        holder = wrap_list_to_json(assets)
+        for word in search:
+            for obj in holder:
+                if word in holder[obj].lower():
+                    return_list.append(holder[obj])
     return return_list
+
+
 
 def _remove_text_score(asset):
     asset.pop('score', None)
