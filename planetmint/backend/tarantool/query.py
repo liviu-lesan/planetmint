@@ -103,7 +103,8 @@ def get_transactions(connection, transactions_ids: list):
 def store_metadatas(connection, metadata: list):
     space = connection.space("meta_data")
     for meta in metadata:
-        space.insert(meta["id"], unwrap_to_string(meta["data"]) if not "metadata" in meta else unwrap_to_string(meta["metadata"]))
+        space.insert( (meta["id"],
+                      unwrap_to_string(meta["data"]) if not "metadata" in meta else unwrap_to_string(meta["metadata"]) ) )
 
 
 @register_query(TarantoolDB)
