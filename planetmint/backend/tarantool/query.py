@@ -20,23 +20,17 @@ register_query = module_dispatch_registrar(query)
 
 @register_query(TarantoolDBConnection)
 def _group_transaction_by_ids(connection, txids: list):
-    txspace = connection.get_space("transactions")
-    inxspace = connection.get_space("inputs")
-    outxspace = connection.get_space("outputs")
-    keysxspace = connection.get_space("keys")
-    assetsxspace = connection.get_space("assets")
-    metaxspace = connection.get_space("meta_data")
     _transactions = []
     for txid in txids:
-        _txobject = txspace.select(txid, index="id_search")
-        if len(_txobject.data) == 0:
+        _txobject = connection.run(connection.space("transactions").select(txid, index="id_search"))
+        if len(_txobject) == 0:
             continue
-        _txobject = _txobject.data[0]
-        _txinputs = inxspace.select(txid, index="id_search").data
-        _txoutputs = outxspace.select(txid, index="id_search").data
-        _txkeys = keysxspace.select(txid, index="txid_search").data
-        _txassets = assetsxspace.select(txid, index="txid_search").data
-        _txmeta = metaxspace.select(txid, index="id_search").data
+        _txobject = _txobject[0]
+        _txinputs = connection.run(connection.space("inputs").select(txid, index="id_search"))
+        _txoutputs = connection.run(connection.space("outputs").select(txid, index="id_search"))
+        _txkeys = connection.run(connection.space("keys").select(txid, index="txid_search"))
+        _txassets = connection.run(connection.space("assets").select(txid, index="txid_search"))
+        _txmeta = connection.run(connection.space("meta_data").select(txid, index="id_search"))
 
         _txinputs = sorted(_txinputs, key=itemgetter(6), reverse=False)
         _txoutputs = sorted(_txoutputs, key=itemgetter(8), reverse=False)
