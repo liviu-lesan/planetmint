@@ -14,7 +14,7 @@ from planetmint.transactions.types.assets.transfer import Transfer
 
 # # from planetmint.backend.connection import Connection, query
 # from planetmint.backend.connection import Connection
-# conn = Connection(backend="tarantool_db").get_connection()
+# conn = Connection(backend="tarantool_db")
 
 pytestmark = pytest.mark.bdb
 
@@ -22,7 +22,7 @@ pytestmark = pytest.mark.bdb
 def test_get_txids_filtered(signed_create_tx, signed_transfer_tx, db_conn):
     from planetmint.backend.tarantool import query
     from planetmint.models import Transaction
-    conn = db_conn.get_connection()
+    conn = db_conn
     # create and insert two blocks, one for the create and one for the
     # transfer transaction
     create_tx_dict = signed_create_tx.to_dict()
@@ -51,8 +51,8 @@ def test_get_txids_filtered(signed_create_tx, signed_transfer_tx, db_conn):
 def test_write_assets(db_conn):
     # from planetmint.backend.connection import Connection
     from planetmint.backend.tarantool import query
-    # conn = Connection().get_connection()
-    conn = db_conn.get_connection()
+    # conn = Connection()
+    conn = db_conn
     assets = [
         {'id': '1', 'data': '1'},
         {'id': '2', 'data': '2'},
@@ -75,7 +75,7 @@ def test_write_assets(db_conn):
 
 def test_get_assets(db_conn):
     from planetmint.backend.tarantool import query
-    conn = db_conn.get_connection()
+    conn = db_conn
     assets = [
         ("1",  '1', '1'),
         ("2", '2', '2'),
@@ -175,8 +175,8 @@ def test_text_search(table):
 def test_write_metadata(db_conn):
     # from planetmint.backend.connection import Connection
     from planetmint.backend.tarantool import query
-    # conn = Connection().get_connection()
-    conn = db_conn.get_connection()
+    # conn = Connection()
+    conn = db_conn
     metadata = [
         {'id': "1", 'data': '1'},
         {'id': "2", 'data': '2'},
@@ -201,7 +201,7 @@ def test_write_metadata(db_conn):
 
 def test_get_metadata(db_conn):
     from planetmint.backend.tarantool import query
-    conn = db_conn.get_connection()
+    conn = db_conn
 
     metadata = [
         {'id': "dd86682db39e4b424df0eec1413cfad65488fd48712097c5d865ca8e8e059b64", 'metadata': None},
@@ -218,7 +218,7 @@ def test_get_metadata(db_conn):
 
 def test_get_owned_ids(signed_create_tx, user_pk, db_conn):
     from planetmint.backend.tarantool import query
-    conn = db_conn.get_connection()
+    conn = db_conn
 
     # insert a transaction
     query.store_transactions(connection=conn, signed_transactions=[signed_create_tx.to_dict()])
@@ -232,7 +232,7 @@ def test_get_spending_transactions(user_pk, user_sk, db_conn):
     from planetmint.models import Transaction
     #
     from planetmint.backend.tarantool import query
-    conn = db_conn.get_connection()
+    conn = db_conn
 
     out = [([user_pk], 1)]
     tx1 = Create.generate([user_pk], out * 3)
@@ -255,7 +255,7 @@ def test_get_spending_transactions_multiple_inputs(db_conn):
     from planetmint.models import Transaction
     from planetmint.transactions.common.crypto import generate_key_pair
     from planetmint.backend.tarantool import query
-    conn = db_conn.get_connection()
+    conn = db_conn
 
     (alice_sk, alice_pk) = generate_key_pair()
     (bob_sk, bob_pk) = generate_key_pair()
@@ -299,7 +299,7 @@ def test_store_block(db_conn):
     from planetmint.lib import Block
     from planetmint.backend.tarantool import query
 
-    conn = db_conn.get_connection()
+    conn = db_conn
 
     block = Block(app_hash='random_utxo',
                   height=3,
@@ -314,7 +314,7 @@ def test_get_block(db_conn):
     from planetmint.lib import Block
     from planetmint.backend.tarantool import query
 
-    conn = db_conn.get_connection()
+    conn = db_conn
 
     block = Block(app_hash='random_utxo',
                   height=3,
@@ -427,7 +427,7 @@ def test_get_block(db_conn):
 def test_store_pre_commit_state(db_conn):
     from planetmint.backend.tarantool import query
 
-    conn = db_conn.get_connection()
+    conn = db_conn
 
     state = dict(height=3, transactions=[])
 
@@ -442,9 +442,9 @@ def test_store_pre_commit_state(db_conn):
 def test_get_pre_commit_state(db_conn):
     from planetmint.backend.tarantool import query
 
-    conn = db_conn.get_connection()
+    conn = db_conn
 
-    space = conn.space("pre_commits")
+    space = conn.get_space("pre_commits")
     all_pre = space.select([])
     for pre in all_pre.data:
         space.delete(pre[0])
@@ -460,7 +460,7 @@ def test_validator_update(db_conn):
 
     from planetmint.backend.tarantool import query
 
-    conn = db_conn.get_connection()
+    conn = db_conn
 
     def gen_validator_update(height):
         return {'validators': [], 'height': height, 'election_id': f'election_id_at_height_{height}'}
@@ -521,7 +521,7 @@ def test_validator_update(db_conn):
 def test_store_abci_chain(description, stores, expected, db_conn):
     from planetmint.backend.tarantool import query
 
-    conn = db_conn.get_connection()
+    conn = db_conn
 
     for store in stores:
         query.store_abci_chain(conn, **store)
