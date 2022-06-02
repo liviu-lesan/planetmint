@@ -106,6 +106,7 @@ def test_text_search(db_conn,table):
         {'id': 7, 'data': 'coffee and cream', 'txid':'7'},
         {'id': 8, 'data': 'Cafe con Leche', 'txid':'8'}
     ]
+    
     objects_metadata = [
         {'id': 1, 'metadata': 'coffee'},
         {'id': 2, 'metadata': 'Coffee Shopping'},
@@ -228,8 +229,8 @@ def test_get_metadata(db_conn):
     query.store_metadatas(connection=conn, metadata=metadata)
 
     for meta in metadata:
-        _m = query.get_metadata(connection=conn, transaction_ids=[meta["id"]])
-        assert _m
+        _m = query.get_metadata(connection=conn, tx_id=[meta["id"]])
+        assert _m==meta
 
 
 def test_get_owned_ids(signed_create_tx, user_pk, db_conn):
