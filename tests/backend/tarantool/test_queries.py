@@ -53,11 +53,11 @@ def test_write_assets(db_conn):
     # conn = Connection().get_connection()
     conn = db_conn.get_connection()
     assets = [
-        {'id': '1', 'data': '1'},
-        {'id': '2', 'data': '2'},
-        {'id': '3', 'data': '3'},
+        {'id': '1', 'data': '1','asset_id':'1'},
+        {'id': '2', 'data': '2','asset_id':'2'},
+        {'id': '3', 'data': '3','asset_id':'3'},
         # Duplicated id. Should not be written to the database
-        {'id': '1', 'data': '1'},
+        {'id': '1', 'data': '1','asset_id':'1'},
     ]
 
     # write the assets
@@ -96,7 +96,7 @@ def test_text_search(db_conn,table):
 
     # Example data and tests cases taken from the mongodb documentation
     # https://docs.mongodb.com/manual/reference/operator/query/text/
-    objects = [
+    objects_assets = [
         {'id': 1, 'data': 'coffee', 'txid':'1'},
         {'id': 2, 'data': 'Coffee Shopping', 'txid':'2'},
         {'id': 3, 'data': 'Baking a cake', 'txid':'3'},
@@ -106,13 +106,23 @@ def test_text_search(db_conn,table):
         {'id': 7, 'data': 'coffee and cream', 'txid':'7'},
         {'id': 8, 'data': 'Cafe con Leche', 'txid':'8'}
     ]
+    objects_metadata = [
+        {'id': 1, 'metadata': 'coffee'},
+        {'id': 2, 'metadata': 'Coffee Shopping'},
+        {'id': 3, 'metadata': 'Baking a cake'},
+        {'id': 4, 'metadata': 'baking'},
+        {'id': 5, 'metadata': 'Café Con Leche'},
+        {'id': 6, 'metadata': 'Сырники'},
+        {'id': 7, 'metadata': 'coffee and cream'},
+        {'id': 8, 'metadata': 'Cafe con Leche'}
+    ]
     
     # insert the assets
     if table == 'assets':
-           query.store_assets(assets=objects, connection=conn)
+           query.store_assets(assets=objects_assets, connection=conn)
     
     if table == 'meta_data':
-        query.store_metadatas(metadata=objects , connection=conn) 
+        query.store_metadatas(metadata=objects_metadata , connection=conn) 
     
     # test search single word
     assert list(query.text_search(conn, 'coffee', table=table)) == [
@@ -184,22 +194,22 @@ def test_write_metadata(db_conn):
     # conn = Connection().get_connection()
     conn = db_conn.get_connection()
     metadata = [
-        {'id': "1", 'data': '1'},
-        {'id': "2", 'data': '2'},
-        {'id': "3", 'data': '3'}
+        {'id': "1", 'metadata': '1'},
+        {'id': "2", 'metadata': '2'},
+        {'id': "3", 'metadata': '3'}
     ]
-    # write the assets
+    # write the metadata
     query.store_metadatas(connection=conn, metadata=metadata)
 
-    # check that 3 assets were written to the database
+    # check that 3 metadata were written to the database
     space = conn.space("meta_data")
-    metadatas = []
+    metadatas_ids = []
     for meta in metadata:
-        _data = space.select(meta["id"])
-        _data = _data.data[0]
-        metadatas.append({"id": _data[0], "data": _data[1]})
+        metadatas_ids.append(meta["id"])
+        
+    metadata_list=query.get_metadatas(connection=conn , transaction_ids=metadatas_ids)
 
-    metadatas = sorted(metadatas, key=lambda k: k["id"])
+    metadatas = sorted(metadata_list, key=lambda k: k["id"])
 
     assert len(metadatas) == 3
     assert list(metadatas) == metadata

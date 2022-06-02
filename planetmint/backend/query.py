@@ -178,7 +178,20 @@ def get_block_with_transaction(connection, txid):
 
 
 @singledispatch
-def get_metadata(connection, transaction_ids):
+def get_metadata(connection, transaction_id):
+    """Get  metadata from the metadata table.
+
+    Args:
+        transaction_id (string): id for the metadata to be retrieved from
+        the database.
+
+    Returns:
+        metadata (dict): returns metadata.
+    """
+    raise NotImplementedError
+
+@singledispatch
+def get_metadatas(connection, transaction_ids):
     """Get a list of metadata from the metadata table.
 
     Args:
@@ -189,7 +202,6 @@ def get_metadata(connection, transaction_ids):
         metadata (list): the list of returned metadata.
     """
     raise NotImplementedError
-
 
 @singledispatch
 def get_assets(connection, asset_ids) -> list:

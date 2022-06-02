@@ -35,8 +35,8 @@ def _group_transaction_by_ids(connection, txids: list):
         _txinputs = inxspace.select(txid, index="id_search").data
         _txoutputs = outxspace.select(txid, index="id_search").data
         _txkeys = keysxspace.select(txid, index="txid_search").data
-        _txassets = wrap_to_json(assetsxspace.select(txid, index="txid_search").data)
-        _txmeta = wrap_to_json(metaxspace.select(txid, index="id_search").data)
+        _txassets = assetsxspace.select(txid, index="txid_search").data
+        _txmeta = metaxspace.select(txid, index="id_search").data
 
         _txinputs = sorted(_txinputs, key=itemgetter(6), reverse=False)
         _txoutputs = sorted(_txoutputs, key=itemgetter(8), reverse=False)
@@ -108,19 +108,24 @@ def store_metadatas(connection, metadata: list):
 
 
 @register_query(TarantoolDB)
-def get_metadata(connection, transaction_ids: list):
-    _returned_data = []
+def get_metadata(connection, tx_id):
     space = connection.space("meta_data")
-    for _id in transaction_ids:
-        metadata = space.select(_id, index="id_search").data
-        if len(metadata) > 0:
-            return_obj = {
-                'id' : metadata[0][0],
-                'metadata':wrap_to_json(metadata[0][1])
-            }
-            _returned_data.append(return_obj)
-    return _returned_data if len(_returned_data) > 0 else None
+    metadata = space.select(tx_id, index="id_search").data
+    if len(metadata) > 0:
+        return_obj = {
+            'id' : metadata[0][0],
+            'metadata':wrap_to_json(metadata[0][1])
+        }
+        return return_obj
+    return None
 
+@register_query(TarantoolDB)
+def get_metadatas(connection, transaction_ids: list) -> list:
+    _returned_data = []
+    for _id in list(set(transaction_ids)):
+        meta_data = get_metadata(connection,_id)
+        _returned_data.append(meta_data)
+    return sorted(_returned_data, key=lambda k: k["id"], reverse=False)
 
 @register_query(TarantoolDB)
 def store_asset(connection, asset):
@@ -165,7 +170,7 @@ def get_asset(connection, asset_id: str):
     if len(_data) > 0:
         return_obj = {
             "data": wrap_to_json(_data[0][0]),
-            "tx_id":_data[0][1],
+            "id":_data[0][1],
             "asset_id":_data[0][2],
         }
         return return_obj
@@ -266,13 +271,13 @@ def text_search(connection, search, *, language='english', case_sensitive=False,
     assets = assets.data
     return_list= list()
     if len(assets) > 0:
-        holder = wrap_list_to_json(assets)
+        holder = wrap_list_to_json(assets[0])
         for obj in holder:
             if search in holder[obj].lower():
                 return_list.append(holder[obj])
     
     if case_sensitive is True:
-        holder = wrap_list_to_json(assets)
+        holder = wrap_list_to_json(assets[0])
         for obj in holder:
             if search in holder[obj]:
                 return_list.append(holder[obj])
