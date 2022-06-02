@@ -87,7 +87,7 @@ def test_get_assets(db_conn):
         assert query.get_asset(asset_id=asset[2], connection=conn)
 
 
-@pytest.mark.parametrize('table', ['assets', 'metadata'])
+@pytest.mark.parametrize('table', ['assets', 'meta_data'])
 def test_text_search(db_conn,table):
     from planetmint.backend.tarantool import query
     conn = db_conn.get_connection()
@@ -111,7 +111,7 @@ def test_text_search(db_conn,table):
     if table == 'assets':
            query.store_assets(assets=objects, connection=conn)
     
-    if table == 'metadata':
+    if table == 'meta_data':
         query.store_metadatas(metadata=objects , connection=conn) 
     
     # test search single word

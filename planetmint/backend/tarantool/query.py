@@ -114,7 +114,11 @@ def get_metadata(connection, transaction_ids: list):
     for _id in transaction_ids:
         metadata = space.select(_id, index="id_search").data
         if len(metadata) > 0:
-            _returned_data.append(wrap_to_json(metadata))
+            return_obj = {
+                'id' : metadata[0][0],
+                'metadata':wrap_to_json(metadata[0][1])
+            }
+            _returned_data.append(return_obj)
     return _returned_data if len(_returned_data) > 0 else None
 
 
@@ -124,10 +128,11 @@ def store_asset(connection, asset):
     #convert = lambda obj: obj if isinstance(obj, tuple) else (unwrap_to_string(obj), obj["id"], obj["id"])
     def convert(obj):
         if obj is isinstance(obj,tuple):
-            obj["data"] = unwrap_to_string(obj["data"])
             return obj
         else:
-            return unwrap_to_string(obj), obj["id"], obj["id"]
+            if type(obj["data"]) is not "string":
+                return unwrap_to_string(obj["data"]), obj["id"], obj["id"]
+            return obj["data"], obj["id"] , obj["id"]
     try:
         space.insert(convert(asset))
     except:  # TODO Add Raise For Duplicate
@@ -140,12 +145,12 @@ def store_assets(connection, assets: list):
     #convert = lambda obj: obj if isinstance(obj, tuple) else (obj, obj["id"], obj["id"])
     def convert(obj):
         if obj is isinstance(obj,tuple):
-            obj["data"] = unwrap_to_string(obj["data"])
             return obj
         else:
-            return unwrap_to_string(obj), obj["id"], obj["id"]
+            if type(obj["data"]) is not "string":
+                return unwrap_to_string(obj["data"]), obj["id"], obj["id"]
+            return obj["data"], obj["id"] , obj["id"]
     for asset in assets:
-        
         try:
             space.insert(convert(asset))
         except Exception as ex:  # TODO Raise ERROR for Duplicate
@@ -158,7 +163,12 @@ def get_asset(connection, asset_id: str):
     _data = space.select(asset_id, index="txid_search")
     _data = _data.data
     if len(_data) > 0:
-        return wrap_to_json(_data[0][0])
+        return_obj = {
+            "data": wrap_to_json(_data[0][0]),
+            "tx_id":_data[0][1],
+            "asset_id":_data[0][2],
+        }
+        return return_obj
     else:
         return []
 

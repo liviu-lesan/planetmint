@@ -27,7 +27,7 @@ elections:create_index('height_search' , {type='tree',unique=false, parts={'heig
 elections:create_index('update_search', {type='tree', unique=false, parts={'election_id', 'height'}})
 
 meta_datas = box.schema.space.create('meta_data',{engine = 'memtx' , is_sync = false})
-meta_datas:format({{name='transaction_id' , type='string'}, {name='meta_data' , type='string'},{name='block_id' , type='string'}})
+meta_datas:format({{name='transaction_id' , type='string'}, {name='meta_data' , type='string'}})
 meta_datas:create_index('id_search', { type='hash' , parts={'transaction_id'}})
 
 pre_commits = box.schema.space.create('pre_commits' , {engine='memtx' , is_sync=false})
