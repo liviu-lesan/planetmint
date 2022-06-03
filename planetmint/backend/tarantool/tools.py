@@ -7,8 +7,25 @@ def wrap_to_json(string_obj):
     return json.loads(string_obj)
 
 
-def wrap_list_to_json(string_list):
-    holder = list()
-    for x in string_list:
-        holder.append(wrap_to_json(x))
-    return holder
+def wrap_list_to_json(string_list , table):
+    holder_list = list()
+    asset_holder = {
+        'id':'',
+        'data':'',
+        'tx_id':''
+    }
+    meta_holder = {
+        'id':'',
+        'metadata':'',
+    }
+    if table == 'assets':
+        asset_holder["id"]=string_list[0]
+        asset_holder["data"]=string_list[1]
+        asset_holder["tx_id"]=string_list[2]
+        holder_list.append(asset_holder)
+    
+    if table == 'metadata':
+        meta_holder["metadata"]=x[1]
+        meta_holder["id"]=x[0]
+        holder_list.append(meta_holder)
+    return holder_list

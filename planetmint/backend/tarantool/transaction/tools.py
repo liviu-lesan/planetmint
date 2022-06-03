@@ -155,10 +155,11 @@ class TransactionCompose:
     def _get_asset(self):
         _asset = iter(self.db_results["asset"])
         _res_asset = next(iter(next(_asset, iter([]))), None)
-        return _res_asset
+        
+        return pltools.wrap_to_json(_res_asset)
 
     def _get_metadata(self):
-        return self.db_results["metadata"][0][1] if len(self.db_results["metadata"]) == 1 else None
+        return pltools.wrap_to_json(self.db_results["metadata"][0][1]) if len(self.db_results["metadata"]) == 1 else None
 
     def _get_inputs(self):
         _inputs = []

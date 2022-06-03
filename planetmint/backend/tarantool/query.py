@@ -103,7 +103,7 @@ def get_transactions(connection, transactions_ids: list):
 def store_metadatas(connection, metadata: list):
     space = connection.space("meta_data")
     for meta in metadata:
-        space.insert( (meta["id"],
+        space.insert((meta["id"],
                       unwrap_to_string(meta["data"]) if not "metadata" in meta else unwrap_to_string(meta["metadata"]) ) )
 
 
@@ -135,9 +135,9 @@ def store_asset(connection, asset):
         if obj is isinstance(obj,tuple):
             return obj
         else:
-            if type(obj["data"]) is not "string":
+            if type(obj["data"]) != "string":
                 return unwrap_to_string(obj["data"]), obj["id"], obj["id"]
-            return obj["data"], obj["id"] , obj["id"]
+            return obj["data"], obj["tx_id"] , obj["id"]
     try:
         space.insert(convert(asset))
     except:  # TODO Add Raise For Duplicate
@@ -152,9 +152,9 @@ def store_assets(connection, assets: list):
         if obj is isinstance(obj,tuple):
             return obj
         else:
-            if type(obj["data"]) is not "string":
-                return unwrap_to_string(obj["data"]), obj["id"], obj["id"]
-            return obj["data"], obj["id"] , obj["id"]
+            if type(obj["data"]) != "string":
+                return unwrap_to_string(obj["data"]), obj["tx_id"], obj["id"]
+            return obj["data"], obj["tx_id"] , obj["id"]
     for asset in assets:
         try:
             space.insert(convert(asset))
@@ -266,34 +266,37 @@ def get_txids_filtered(connection, asset_id: str, operation: str = None,
 @register_query(TarantoolDB)
 def text_search(connection, search, *, language='english', case_sensitive=False, diacritic_sensitive=False, text_score=False, limit=0, table):
     import planetmint.backend.tarantool.tools
-    space = connection.space(table)
+    space  = connection.space(table)
     assets = space.select()
     assets = assets.data
+    holder = []
     return_list= list()
+    for asset in assets:
+        holder = wrap_list_to_json(asset,table=table)
     if len(assets) > 0:
-        holder = wrap_list_to_json(assets[0])
         for obj in holder:
-            if search in holder[obj].lower():
-                return_list.append(holder[obj])
+            for x in obj:
+                if search in obj[x].lower():
+                    return_list.append(obj)
     
     if case_sensitive is True:
-        holder = wrap_list_to_json(assets[0])
         for obj in holder:
             if search in holder[obj]:
                 return_list.append(holder[obj])
 
-    if limit >0:
-        holder = wrap_list_to_json(assets)
+    if limit > 0:
         while return_list.count() == limit:
             for obj in holder:
                 if search in holder[obj].lower():
                     return_list.append(holder[obj])
+
     if type(search) == list or tuple:
-        holder = wrap_list_to_json(assets)
         for word in search:
             for obj in holder:
-                if word in holder[obj].lower():
-                    return_list.append(holder[obj])
+                for x in obj:
+                    if word in obj[x].lower():
+                        return_list.append(obj)
+                        
     return return_list
 
 
