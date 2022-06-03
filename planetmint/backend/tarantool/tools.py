@@ -19,13 +19,15 @@ def wrap_list_to_json(string_list , table):
         'metadata':'',
     }
     if table == 'assets':
-        asset_holder["id"]=string_list[0]
-        asset_holder["data"]=string_list[1]
-        asset_holder["tx_id"]=string_list[2]
+        asset_holder["data"]=string_list[0]
+        asset_holder["tx_id"]=string_list[1]
+        asset_holder["id"]=string_list[2]
+        
+        
         holder_list.append(asset_holder)
     
     if table == 'metadata':
-        meta_holder["metadata"]=x[1]
-        meta_holder["id"]=x[0]
+        meta_holder["id"]=string_list[0]
+        meta_holder["metadata"]=string_list[1]
         holder_list.append(meta_holder)
     return holder_list
