@@ -2,8 +2,10 @@
 # Planetmint and IPDB software contributors.
 # SPDX-License-Identifier: (Apache-2.0 AND CC-BY-4.0)
 # Code is Apache-2.0 and docs are CC-BY-4.0
-
+import random
 from copy import deepcopy
+from planetmint.backend import query
+from planetmint.backend.tarantool import connection
 
 import pytest
 
@@ -33,16 +35,16 @@ def test_get_txids_filtered(signed_create_tx, signed_transfer_tx, db_conn):
     asset_id = Transaction.get_asset_id([signed_create_tx, signed_transfer_tx])
 
     # Test get by just asset id
-    txids = set(query.get_txids_filtered(connection=conn, asset_id=asset_id))
-    assert txids == {signed_create_tx.id, signed_transfer_tx.id}
+    tx_ids = set(query.get_txids_filtered(connection=conn, asset_id=asset_id))
+    assert tx_ids == {signed_create_tx.id, signed_transfer_tx.id}
 
     # Test get by asset and CREATE
-    txids = set(query.get_txids_filtered(connection=conn, asset_id=asset_id, operation=Transaction.CREATE))
-    assert txids == {signed_create_tx.id}
+    tx_ids = set(query.get_txids_filtered(connection=conn, asset_id=asset_id, operation=Transaction.CREATE))
+    assert tx_ids == {signed_create_tx.id}
 
     # Test get by asset and TRANSFER
-    txids = set(query.get_txids_filtered(connection=conn, asset_id=asset_id, operation=Transaction.TRANSFER))
-    assert txids == {signed_transfer_tx.id}
+    tx_ids = set(query.get_txids_filtered(connection=conn, asset_id=asset_id, operation=Transaction.TRANSFER))
+    assert tx_ids == {signed_transfer_tx.id}
 
 
 def test_write_assets(db_conn):
@@ -51,11 +53,11 @@ def test_write_assets(db_conn):
     # conn = Connection().get_connection()
     conn = db_conn.get_connection()
     assets = [
-        {'id': '1', 'data': '1'},
-        {'id': '2', 'data': '2'},
-        {'id': '3', 'data': '3'},
+        {'id': '1', 'data': '1','asset_id':'1'},
+        {'id': '2', 'data': '2','asset_id':'2'},
+        {'id': '3', 'data': '3','asset_id':'3'},
         # Duplicated id. Should not be written to the database
-        {'id': '1', 'data': '1'},
+        {'id': '1', 'data': '1','asset_id':'1'},
     ]
 
     # write the assets
@@ -85,88 +87,135 @@ def test_get_assets(db_conn):
         assert query.get_asset(asset_id=asset[2], connection=conn)
 
 
-@pytest.mark.parametrize('table', ['assets', 'metadata'])
-def test_text_search(table):
-    assert "PASS FOR NOW"
+@pytest.mark.parametrize('table', ['assets', 'meta_data'])
+def test_text_search(db_conn,table):
+    from planetmint.backend.tarantool import query
+    conn = db_conn.get_connection()
 
-    # # Example data and tests cases taken from the mongodb documentation
-    # # https://docs.mongodb.com/manual/reference/operator/query/text/
-    # objects = [
-    #     {'id': 1, 'subject': 'coffee', 'author': 'xyz', 'views': 50},
-    #     {'id': 2, 'subject': 'Coffee Shopping', 'author': 'efg', 'views': 5},
-    #     {'id': 3, 'subject': 'Baking a cake', 'author': 'abc', 'views': 90},
-    #     {'id': 4, 'subject': 'baking', 'author': 'xyz', 'views': 100},
-    #     {'id': 5, 'subject': 'Café Con Leche', 'author': 'abc', 'views': 200},
-    #     {'id': 6, 'subject': 'Сырники', 'author': 'jkl', 'views': 80},
-    #     {'id': 7, 'subject': 'coffee and cream', 'author': 'efg', 'views': 10},
-    #     {'id': 8, 'subject': 'Cafe con Leche', 'author': 'xyz', 'views': 10}
-    # ]
-    #
-    # # insert the assets
-    # conn.db[table].insert_many(deepcopy(objects), ordered=False)
-    #
-    # # test search single word
-    # assert list(query.text_search(conn, 'coffee', table=table)) == [
-    #     {'id': 1, 'subject': 'coffee', 'author': 'xyz', 'views': 50},
-    #     {'id': 2, 'subject': 'Coffee Shopping', 'author': 'efg', 'views': 5},
-    #     {'id': 7, 'subject': 'coffee and cream', 'author': 'efg', 'views': 10},
-    # ]
-    #
-    # # match any of the search terms
-    # assert list(query.text_search(conn, 'bake coffee cake', table=table)) == [
-    #     {'author': 'abc', 'id': 3, 'subject': 'Baking a cake', 'views': 90},
-    #     {'author': 'xyz', 'id': 1, 'subject': 'coffee', 'views': 50},
-    #     {'author': 'xyz', 'id': 4, 'subject': 'baking', 'views': 100},
-    #     {'author': 'efg', 'id': 2, 'subject': 'Coffee Shopping', 'views': 5},
-    #     {'author': 'efg', 'id': 7, 'subject': 'coffee and cream', 'views': 10}
-    # ]
-    #
-    # # search for a phrase
-    # assert list(query.text_search(conn, '\"coffee shop\"', table=table)) == [
-    #     {'id': 2, 'subject': 'Coffee Shopping', 'author': 'efg', 'views': 5},
-    # ]
-    #
-    # # exclude documents that contain a term
+   
+
+    # Example data and tests cases taken from the mongodb documentation
+    # https://docs.mongodb.com/manual/reference/operator/query/text/
+    objects_assets = [
+        {'id': "1", 'data': 'coffee', 'tx_id':'1543543'},
+        {'id': "2", 'data': 'Coffee Shopping', 'tx_id':'2423423'},
+        {'id': "3", 'data': 'Baking a cake', 'tx_id':'3423523'},
+        {'id': "4", 'data': 'baking', 'tx_id':'4432423'},
+        {'id': "5", 'data': 'Café Con Leche', 'tx_id':'55423423'},
+        {'id': "6", 'data': 'Сырники',  'tx_id':'54534326'},
+        {'id': "7", 'data': 'coffee and cream', 'tx_id':'74325425'},
+        {'id': "8", 'data': 'Cafe con Leche', 'tx_id':'4324988'}
+    ]
+    
+    objects_metadata = [
+        {'id': "1", 'metadata': 'coffee'},
+        {'id': "2", 'metadata': 'Coffee Shopping'},
+        {'id': "3", 'metadata': 'Baking a cake'},
+        {'id': "4", 'metadata': 'baking'},
+        {'id': "5", 'metadata': 'Café Con Leche'},
+        {'id': "6", 'metadata': 'Сырники'},
+        {'id': "7", 'metadata': 'coffee and cream'},
+        {'id': "8", 'metadata': 'Cafe con Leche'}
+    ]
+    
+    # insert the assets
+    if table == 'assets':
+        query.store_assets(assets=objects_assets, connection=conn)
+     # test search single word
+        assert query.text_search(conn, 'coffee', table=table) == [
+            {'id': "1", 'data': 'coffee', 'tx_id':'1543543'},
+            {'id': "2", 'data': 'Coffee Shopping', 'tx_id':'2423423'},
+            {'id': "7", 'data': 'coffee and cream', 'tx_id':'74325425'},
+        ]
+        
+        # match any of the search terms
+        assert query.text_search(conn, 'bake coffee cake', table=table) == [
+            {'id': "3", 'data': 'Baking a cake', 'tx_id':'3423523'},
+            {'id': "1", 'data': 'coffee', 'tx_id':'1543543'},
+            {'id': "4", 'data': 'baking', 'tx_id':'4432423'},
+            {'id': "2", 'data': 'Coffee Shopping', 'tx_id':'2423423'},
+            {'id': "7", 'data': 'coffee and cream', 'tx_id':'74325425'},
+        ]
+        
+        # search for a phrase
+        assert query.text_search(conn, '\"coffee shop\"', table=table) == [
+            {'id': "2", 'data': 'Coffee Shopping', 'tx_id':'2423423'},
+        ]
+        assert query.text_search(conn, 'Coffee', case_sensitive=True, table=table) == [
+            {'id': "2", 'data': 'Coffee Shopping', 'tx_id':'2423423'},
+        ]
+        assert query.text_search(conn, 'coffee', limit=2, table=table) == [
+            {'id': "1", 'data': 'coffee', 'tx_id':'1543543'},
+            {'id': "2", 'data': 'Coffee Shopping', 'tx_id':'2423423'},
+        ]
+
+    if table == 'meta_data':
+        query.store_metadatas(metadata=objects_metadata , connection=conn)
+        assert query.text_search(conn, 'coffee', table=table) == [
+            {'id': "1", 'metadata': 'coffee'},
+            {'id': "2", 'metadata': 'Coffee Shopping'},
+            {'id': "7", 'metadata': 'coffee and cream'},
+        ]
+        
+        # match any of the search terms
+        assert query.text_search(conn, 'bake coffee cake', table=table) == [
+            {'id': "3", 'metadata': 'Baking a cake'},
+            {'id': "1", 'metadata': 'coffee'},
+            {'id': "4", 'metadata': 'baking'},
+            {'id': "2", 'metadata': 'Coffee Shopping'},
+            {'id': "7", 'metadata': 'coffee and cream'},
+        ]
+        
+        # search for a phrase
+        assert query.text_search(conn, '\"coffee shop\"', table=table) == [
+            {'id': "2", 'metadata': 'Coffee Shopping'},
+        ]
+        assert query.text_search(conn, 'Coffee', case_sensitive=True, table=table) == [
+            {'id': "2", 'metadata': 'Coffee Shopping'},
+        ]
+        assert query.text_search(conn, 'coffee', limit=2, table=table) == [
+            {'id': "1", 'metadata': 'coffee', 'tx_id':'1'},
+            {'id': "2", 'metadata': 'Coffee Shopping'},
+        ]
+    
+   
+    
+    # exclude documents that contain a term
     # assert list(query.text_search(conn, 'coffee -shop', table=table)) == [
-    #     {'id': 1, 'subject': 'coffee', 'author': 'xyz', 'views': 50},
-    #     {'id': 7, 'subject': 'coffee and cream', 'author': 'efg', 'views': 10},
+    #     {'id': 1, 'data': 'coffee', 'author': 'xyz', 'views': 50},
+    #     {'id': 7, 'data': 'coffee and cream', 'author': 'efg', 'views': 10},
     # ]
-    #
-    # # search different language
+    
+    # search different language
     # assert list(query.text_search(conn, 'leche', language='es', table=table)) == [
-    #     {'id': 5, 'subject': 'Café Con Leche', 'author': 'abc', 'views': 200},
-    #     {'id': 8, 'subject': 'Cafe con Leche', 'author': 'xyz', 'views': 10}
+    #     {'id': 5, 'data': 'Café Con Leche', 'author': 'abc', 'views': 200},
+    #     {'id': 8, 'data': 'Cafe con Leche', 'author': 'xyz', 'views': 10}
     # ]
-    #
-    # # case and diacritic insensitive search
+    
+    # case and diacritic insensitive search
     # assert list(query.text_search(conn, 'сы́рники CAFÉS', table=table)) == [
-    #     {'id': 6, 'subject': 'Сырники', 'author': 'jkl', 'views': 80},
-    #     {'id': 5, 'subject': 'Café Con Leche', 'author': 'abc', 'views': 200},
-    #     {'id': 8, 'subject': 'Cafe con Leche', 'author': 'xyz', 'views': 10}
+    #     {'id': 6, 'data': 'Сырники', 'author': 'jkl', 'views': 80},
+    #     {'id': 5, 'data': 'Café Con Leche', 'author': 'abc', 'views': 200},
+    #     {'id': 8, 'data': 'Cafe con Leche', 'author': 'xyz', 'views': 10}
     # ]
-    #
-    # # case sensitive search
-    # assert list(query.text_search(conn, 'Coffee', case_sensitive=True, table=table)) == [
-    #     {'id': 2, 'subject': 'Coffee Shopping', 'author': 'efg', 'views': 5},
-    # ]
-    #
-    # # diacritic sensitive search
+    
+    # case sensitive search
+    
+    
+    # diacritic sensitive search
     # assert list(query.text_search(conn, 'CAFÉ', diacritic_sensitive=True, table=table)) == [
-    #     {'id': 5, 'subject': 'Café Con Leche', 'author': 'abc', 'views': 200},
+    #     {'id': 5, 'data': 'Café Con Leche', 'author': 'abc', 'views': 200},
     # ]
-    #
-    # # return text score
+    
+    # return text score
     # assert list(query.text_search(conn, 'coffee', text_score=True, table=table)) == [
-    #     {'id': 1, 'subject': 'coffee', 'author': 'xyz', 'views': 50, 'score': 1.0},
-    #     {'id': 2, 'subject': 'Coffee Shopping', 'author': 'efg', 'views': 5, 'score': 0.75},
-    #     {'id': 7, 'subject': 'coffee and cream', 'author': 'efg', 'views': 10, 'score': 0.75},
+    #     {'id': 1, 'data': 'coffee', 'author': 'xyz', 'views': 50, 'score': 1.0},
+    #     {'id': 2, 'data': 'Coffee Shopping', 'author': 'efg', 'views': 5, 'score': 0.75},
+    #     {'id': 7, 'data': 'coffee and cream', 'author': 'efg', 'views': 10, 'score': 0.75},
     # ]
-    #
-    # # limit search result
-    # assert list(query.text_search(conn, 'coffee', limit=2, table=table)) == [
-    #     {'id': 1, 'subject': 'coffee', 'author': 'xyz', 'views': 50},
-    #     {'id': 2, 'subject': 'Coffee Shopping', 'author': 'efg', 'views': 5},
-    # ]
+    
+    # limit search result
+    
 
 
 def test_write_metadata(db_conn):
@@ -175,22 +224,22 @@ def test_write_metadata(db_conn):
     # conn = Connection().get_connection()
     conn = db_conn.get_connection()
     metadata = [
-        {'id': "1", 'data': '1'},
-        {'id': "2", 'data': '2'},
-        {'id': "3", 'data': '3'}
+        {'id':'321' , 'metadata': '1'},
+        {'id': '343', 'metadata': '2'},
+        {'id': '432', 'metadata': '3'}
     ]
-    # write the assets
+    # write the metadata
     query.store_metadatas(connection=conn, metadata=metadata)
 
-    # check that 3 assets were written to the database
+    # check that 3 metadata were written to the database
     space = conn.space("meta_data")
-    metadatas = []
+    metadatas_ids = []
     for meta in metadata:
-        _data = space.select(meta["id"])
-        _data = _data.data[0]
-        metadatas.append({"id": _data[0], "data": _data[1]})
+        metadatas_ids.append(meta["id"])
+        
+    metadata_list=query.get_metadatas(connection=conn , transaction_ids=metadatas_ids)
 
-    metadatas = sorted(metadatas, key=lambda k: k["id"])
+    metadatas = sorted(metadata_list, key=lambda k: k["id"])
 
     assert len(metadatas) == 3
     assert list(metadatas) == metadata
@@ -209,8 +258,8 @@ def test_get_metadata(db_conn):
     query.store_metadatas(connection=conn, metadata=metadata)
 
     for meta in metadata:
-        _m = query.get_metadata(connection=conn, transaction_ids=[meta["id"]])
-        assert _m
+        _m = query.get_metadata(connection=conn, tx_id=[meta["id"]])
+        assert _m==meta
 
 
 def test_get_owned_ids(signed_create_tx, user_pk, db_conn):
@@ -243,7 +292,7 @@ def test_get_spending_transactions(user_pk, user_sk, db_conn):
 
     links = [inputs[0].fulfills.to_dict(), inputs[2].fulfills.to_dict()]
     txns = list(query.get_spending_transactions(connection=conn, inputs=links))
-
+    
     # tx3 not a member because input 1 not asked for
     assert txns == [tx2.to_dict(), tx4.to_dict()]
 

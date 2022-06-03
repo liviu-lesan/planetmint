@@ -4,11 +4,13 @@
 # Code is Apache-2.0 and docs are CC-BY-4.0
 
 """Query implementation for Tarantool"""
-
+from posixpath import split
+import planetmint.backend.tarantool.tools
 from secrets import token_hex
 from operator import itemgetter
 
 from planetmint.backend import query
+from planetmint.backend.tarantool.tools import unwrap_to_string, wrap_list_to_json, wrap_to_json
 from planetmint.backend.utils import module_dispatch_registrar
 from planetmint.backend.tarantool.connection import TarantoolDB
 from planetmint.backend.tarantool.transaction.tools import TransactionCompose, TransactionDecompose
@@ -102,24 +104,41 @@ def get_transactions(connection, transactions_ids: list):
 def store_metadatas(connection, metadata: list):
     space = connection.space("meta_data")
     for meta in metadata:
-        space.insert((meta["id"], meta["data"] if not "metadata" in meta else meta["metadata"]))
+        space.insert((meta["id"],
+                      unwrap_to_string(meta["data"]) if not "metadata" in meta else unwrap_to_string(meta["metadata"]) ) )
 
 
 @register_query(TarantoolDB)
-def get_metadata(connection, transaction_ids: list):
-    _returned_data = []
+def get_metadata(connection, tx_id):
     space = connection.space("meta_data")
-    for _id in transaction_ids:
-        metadata = space.select(_id, index="id_search").data
-        if len(metadata) > 0:
-            _returned_data.append(metadata)
-    return _returned_data if len(_returned_data) > 0 else None
+    metadata = space.select(tx_id, index="id_search").data
+    if len(metadata) > 0:
+        return_obj = {
+            'id' : metadata[0][0],
+            'metadata':wrap_to_json(metadata[0][1])
+        }
+        return return_obj
+    return None
 
+@register_query(TarantoolDB)
+def get_metadatas(connection, transaction_ids: list) -> list:
+    _returned_data = []
+    for _id in list(set(transaction_ids)):
+        meta_data = get_metadata(connection,_id)
+        _returned_data.append(meta_data)
+    return sorted(_returned_data, key=lambda k: k["id"], reverse=False)
 
 @register_query(TarantoolDB)
 def store_asset(connection, asset):
     space = connection.space("assets")
-    convert = lambda obj: obj if isinstance(obj, tuple) else (obj, obj["id"], obj["id"])
+    #convert = lambda obj: obj if isinstance(obj, tuple) else (unwrap_to_string(obj), obj["id"], obj["id"])
+    def convert(obj):
+        if obj is isinstance(obj,tuple):
+            return obj
+        else:
+            if type(obj["data"]) != "string":
+                return unwrap_to_string(obj["data"]), obj["id"], obj["id"]
+            return obj["data"], obj["tx_id"] , obj["id"]
     try:
         space.insert(convert(asset))
     except:  # TODO Add Raise For Duplicate
@@ -129,7 +148,14 @@ def store_asset(connection, asset):
 @register_query(TarantoolDB)
 def store_assets(connection, assets: list):
     space = connection.space("assets")
-    convert = lambda obj: obj if isinstance(obj, tuple) else (obj, obj["id"], obj["id"])
+    #convert = lambda obj: obj if isinstance(obj, tuple) else (obj, obj["id"], obj["id"])
+    def convert(obj):
+        if obj is isinstance(obj,tuple):
+            return obj
+        else:
+            if type(obj["data"]) != "string":
+                return unwrap_to_string(obj["data"]), obj["tx_id"], obj["id"]
+            return obj["data"], obj["tx_id"] , obj["id"]
     for asset in assets:
         try:
             space.insert(convert(asset))
@@ -142,7 +168,15 @@ def get_asset(connection, asset_id: str):
     space = connection.space("assets")
     _data = space.select(asset_id, index="txid_search")
     _data = _data.data
-    return _data[0][0] if len(_data) > 0 else []
+    if len(_data) > 0:
+        return_obj = {
+            "data": wrap_to_json(_data[0][0]),
+            "id":_data[0][1],
+            "asset_id":_data[0][2],
+        }
+        return return_obj
+    else:
+        return []
 
 
 @register_query(TarantoolDB)
@@ -230,25 +264,42 @@ def get_txids_filtered(connection, asset_id: str, operation: str = None,
     return tuple([elem[0] for elem in _transactions])
 
 
-# @register_query(TarantoolDB)
-# def text_search(conn, search, *, language='english', case_sensitive=False,
-#                 # TODO review text search in tarantool (maybe, remove)
-#                 diacritic_sensitive=False, text_score=False, limit=0, table='assets'):
-#     cursor = conn.run(
-#         conn.collection(table)
-#             .find({'$text': {
-#             '$search': search,
-#             '$language': language,
-#             '$caseSensitive': case_sensitive,
-#             '$diacriticSensitive': diacritic_sensitive}},
-#             {'score': {'$meta': 'textScore'}, '_id': False})
-#             .sort([('score', {'$meta': 'textScore'})])
-#             .limit(limit))
-#
-#     if text_score:
-#         return cursor
-#
-#     return (_remove_text_score(obj) for obj in cursor)
+@register_query(TarantoolDB)
+def text_search(connection, search, *, language='english', case_sensitive=False, diacritic_sensitive=False, text_score=False, limit=0, table):
+    import planetmint.backend.tarantool.tools
+    space  = connection.space(table)
+    assets = space.select()
+    assets = assets.data
+    holder = []
+    return_list= list()
+    for asset in assets:
+        holder = wrap_list_to_json(asset,table=table)
+    if len(assets) > 0:
+        for obj in holder:
+            for x in obj:
+                if search in obj[x].lower():
+                    return_list.append(obj)
+    
+    if case_sensitive is True:
+        for obj in holder:
+            if search in holder[obj]:
+                return_list.append(holder[obj])
+
+    if limit > 0:
+        while return_list.count() == limit:
+            for obj in holder:
+                if search in holder[obj].lower():
+                    return_list.append(holder[obj])
+
+    if type(search.split()) == list or tuple and len(search.split()) > 1:
+        for word in search:
+            for obj in holder:
+                for x in obj:
+                    if word in obj[x].lower():
+                        return_list.append(obj)
+
+    return return_list
+
 
 
 def _remove_text_score(asset):

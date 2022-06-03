@@ -2,8 +2,10 @@
 # Planetmint and IPDB software contributors.
 # SPDX-License-Identifier: (Apache-2.0 AND CC-BY-4.0)
 # Code is Apache-2.0 and docs are CC-BY-4.0
+from inspect import unwrap
 import warnings
 from unittest.mock import patch
+from planetmint.backend.tarantool.tools import unwrap_to_string
 
 import pytest
 from base58 import b58decode
@@ -61,18 +63,20 @@ class TestBigchainApi(object):
                 b.store_bulk_transactions([tx])
 
     def test_text_search(self, b, alice):
+        import planetmint.backend.tarantool.tools
         from planetmint.models import Transaction
         from planetmint.backend.tarantool.connection import TarantoolDB
-
+        
         if isinstance(b.connection, TarantoolDB):
             warnings.warn(" :::::: This function is used only with  :::::: ")
             return
 
         # define the assets
-        asset1 = {'msg': 'Planetmint 1'}
-        asset2 = {'msg': 'Planetmint 2'}
-        asset3 = {'msg': 'Planetmint 3'}
+        asset1 = unwrap_to_string({'msg': 'Planetmint 1'})
+        asset2 = unwrap_to_string({'msg': 'Planetmint 2'})
+        asset3 = unwrap_to_string({'msg': 'Planetmint 3'})
 
+        
         # create the transactions
         tx1 = Transaction.create([alice.public_key], [([alice.public_key], 1)],
                                  asset=asset1).sign([alice.private_key])
