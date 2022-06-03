@@ -290,13 +290,13 @@ def text_search(connection, search, *, language='english', case_sensitive=False,
                 if search in holder[obj].lower():
                     return_list.append(holder[obj])
 
-    if type(search) == list or tuple:
+    if type(search.split()) == list or tuple:
         for word in search:
             for obj in holder:
                 for x in obj:
                     if word in obj[x].lower():
                         return_list.append(obj)
-                        
+
     return return_list
 
 
