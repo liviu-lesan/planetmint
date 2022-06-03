@@ -4,6 +4,7 @@
 # Code is Apache-2.0 and docs are CC-BY-4.0
 
 """Query implementation for Tarantool"""
+from posixpath import split
 import planetmint.backend.tarantool.tools
 from secrets import token_hex
 from operator import itemgetter
@@ -290,7 +291,7 @@ def text_search(connection, search, *, language='english', case_sensitive=False,
                 if search in holder[obj].lower():
                     return_list.append(holder[obj])
 
-    if type(search.split()) == list or tuple:
+    if type(search.split()) == list or tuple and len(search.split()) > 1:
         for word in search:
             for obj in holder:
                 for x in obj:
