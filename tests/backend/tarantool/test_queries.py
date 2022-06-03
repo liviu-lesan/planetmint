@@ -263,7 +263,7 @@ def test_get_spending_transactions(user_pk, user_sk, db_conn):
 
     links = [inputs[0].fulfills.to_dict(), inputs[2].fulfills.to_dict()]
     txns = list(query.get_spending_transactions(connection=conn, inputs=links))
-
+    
     # tx3 not a member because input 1 not asked for
     assert txns == [tx2.to_dict(), tx4.to_dict()]
 
